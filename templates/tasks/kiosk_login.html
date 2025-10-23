@@ -1,0 +1,9 @@
+{% extends "tasks/base.html" %}
+{% block title %}自助终端登录{% endblock %}
+{% block content %}
+<form method="post" class="box">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button class="button is-primary" type="submit">刷卡登录</button>
+</form>
+{% endblock %}

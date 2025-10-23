@@ -1,0 +1,35 @@
+{% extends "tasks/base.html" %}
+{% block title %}任务查询{% endblock %}
+{% block content %}
+<form method="get" class="box">
+  <div class="field">
+    <label class="label">工号</label>
+    <div class="control">
+      <input class="input" type="text" name="user" value="{{ user_id }}" />
+    </div>
+  </div>
+  <button class="button is-link" type="submit">查询</button>
+</form>
+<table class="table is-fullwidth">
+  <thead>
+    <tr>
+      <th>任务单号</th>
+      <th>状态</th>
+      <th>加急</th>
+      <th>最近进展</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for task in tasks %}
+    <tr>
+      <td>{{ task.task_code }}</td>
+      <td>{{ task.get_status_display }}</td>
+      <td>{% if task.urgent %}<span class="tag is-danger">加急</span>{% else %}否{% endif %}</td>
+      <td>{% if task.events.all %}{{ task.events.first.note }}{% endif %}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="4">请先输入工号查询</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -112,3 +112,34 @@
 ## 总结
 
 本设计为企业内网环境下的复印任务管理系统，使用扫码与标签机制实现任务追踪、排队与归档。系统结构清晰，模块职责分明，支持扩展及统计功能，可有效提升文印室任务透明度与服务效率。
+
+## 项目实现概述
+
+本仓库基于 Django 框架实现 CopyTrack 复印任务叫号系统，包含以下子模块：
+
+- **OA 集成模块**：`copytrack/tasks/services/oa_integration.py` 提供 CSV 导入与数据同步逻辑，对应管理命令 `import_oa_tasks`。
+- **用户自助终端模块**：`templates/tasks/kiosk_*.html` 与 `KioskTasksView` 支撑刷卡取号、打印标签与加急申请。
+- **用户 Web 查询模块**：`WebTaskListView` 提供查询入口，展示任务进度和最新事件。
+- **操作员终端模块**：`OperatorConsoleView` 与 `ScanForm` 用于扫码变更任务状态，并记录事件。
+- **标签打印模块**：`LabelPrinter` 构造 ZPL 指令并触发打印，同时更新任务状态。
+- **队列与状态管理模块**：`queue.py` 提供队列查询，`Task` 模型封装状态流转方法与事件记录。
+- **报表统计模块**：`ReportView` 支持筛选、统计与 CSV 导出，`statistics.py` 负责数据聚合。
+
+### 快速开始
+
+```bash
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
+```
+
+- 自助终端：`/kiosk/login/`
+- 用户查询：`/web/tasks/`
+- 操作员控制台：`/operator/`
+- 报表统计：`/reports/`
+
+如需同步 OA 数据，可执行：
+
+```bash
+python manage.py import_oa_tasks oa_export.csv
+```
