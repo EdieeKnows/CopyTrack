@@ -1,0 +1,36 @@
+{% extends "tasks/base.html" %}
+{% block title %}系统概览 - CopyTrack{% endblock %}
+{% block content %}
+<div class="columns">
+  <div class="column">
+    <div class="box">
+      <h2 class="title is-4">队列概览</h2>
+      <p>待处理任务: {{ waiting|length }}</p>
+      <p>处理中: {{ processing|length }}</p>
+      <p>最近完成:</p>
+      <ul>
+        {% for item in completed %}
+        <li>{{ item.task_code }} - {{ item.user_name }} - {{ item.get_status_display }}</li>
+        {% empty %}
+        <li>暂无数据</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="column">
+    <div class="box">
+      <h2 class="title is-4">统计信息</h2>
+      <p>总任务: {{ summary.total }}</p>
+      <p>加急: {{ summary.urgent }}</p>
+      <p>已完成: {{ summary.completed }}</p>
+      <p>已交付: {{ summary.delivered }}</p>
+    </div>
+  </div>
+</div>
+<div class="buttons">
+  <a class="button is-link" href="{% url 'tasks:kiosk_login' %}">自助取号终端</a>
+  <a class="button is-link" href="{% url 'tasks:web_tasks' %}">用户查询</a>
+  <a class="button is-link" href="{% url 'tasks:operator_console' %}">操作员控制台</a>
+  <a class="button is-link" href="{% url 'tasks:reports' %}">报表统计</a>
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "tasks/base.html" %}
+{% block title %}操作员控制台{% endblock %}
+{% block content %}
+<div class="columns">
+  <div class="column is-one-third">
+    <form method="post" class="box">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button class="button is-primary" type="submit">提交</button>
+    </form>
+  </div>
+  <div class="column">
+    <h2 class="title is-5">待处理</h2>
+    <ul>
+      {% for task in waiting %}
+      <li>{{ task.task_code }} - {{ task.user_name }} {% if task.urgent %}<span class="tag is-danger">加急</span>{% endif %}</li>
+      {% empty %}
+      <li>暂无</li>
+      {% endfor %}
+    </ul>
+    <h2 class="title is-5 mt-5">处理中</h2>
+    <ul>
+      {% for task in processing %}
+      <li>{{ task.task_code }} - {{ task.user_name }} ({{ task.start_time|date:"H:i" }})</li>
+      {% empty %}
+      <li>暂无</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}
