@@ -1,10 +1,24 @@
 {% extends "tasks/base.html" %}
 {% block title %}加急申请{% endblock %}
+{% block header %}加急申请{% endblock %}
 {% block content %}
-<h2 class="title is-4">任务 {{ task.task_code }} 加急申请</h2>
-<form method="post" class="box">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button class="button is-danger" type="submit">提交</button>
-</form>
+<div class="window content-window">
+  <div class="title-bar">
+    <div class="title-bar-text">任务 {{ task.task_code }} 加急</div>
+    <div class="title-bar-controls">
+      <button aria-label="Minimize"></button>
+      <button aria-label="Maximize"></button>
+      <button aria-label="Close"></button>
+    </div>
+  </div>
+  <div class="window-body">
+    <form method="post" class="form-98">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <div class="field-row" style="justify-content: flex-end; gap: 8px;">
+        <button class="button" type="submit">提交</button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}

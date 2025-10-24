@@ -1,35 +1,60 @@
 {% extends "tasks/base.html" %}
 {% block title %}任务查询{% endblock %}
+{% block header %}任务查询{% endblock %}
 {% block content %}
-<form method="get" class="box">
-  <div class="field">
-    <label class="label">工号</label>
-    <div class="control">
-      <input class="input" type="text" name="user" value="{{ user_id }}" />
+<div class="window content-window">
+  <div class="title-bar">
+    <div class="title-bar-text">查询条件</div>
+    <div class="title-bar-controls">
+      <button aria-label="Minimize"></button>
+      <button aria-label="Maximize"></button>
+      <button aria-label="Close"></button>
     </div>
   </div>
-  <button class="button is-link" type="submit">查询</button>
-</form>
-<table class="table is-fullwidth">
-  <thead>
-    <tr>
-      <th>任务单号</th>
-      <th>状态</th>
-      <th>加急</th>
-      <th>最近进展</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for task in tasks %}
-    <tr>
-      <td>{{ task.task_code }}</td>
-      <td>{{ task.get_status_display }}</td>
-      <td>{% if task.urgent %}<span class="tag is-danger">加急</span>{% else %}否{% endif %}</td>
-      <td>{% if task.events.all %}{{ task.events.first.note }}{% endif %}</td>
-    </tr>
-    {% empty %}
-    <tr><td colspan="4">请先输入工号查询</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
+  <div class="window-body">
+    <form method="get" class="form-98">
+      <p>
+        <label for="user-input">工号</label>
+        <input id="user-input" type="text" name="user" value="{{ user_id }}" />
+      </p>
+      <div class="field-row" style="justify-content: flex-end; gap: 8px;">
+        <button class="button" type="submit">查询</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="window content-window">
+  <div class="title-bar">
+    <div class="title-bar-text">任务列表</div>
+    <div class="title-bar-controls">
+      <button aria-label="Minimize"></button>
+      <button aria-label="Maximize"></button>
+      <button aria-label="Close"></button>
+    </div>
+  </div>
+  <div class="window-body">
+    <table class="table-98">
+      <thead>
+        <tr>
+          <th>任务单号</th>
+          <th>状态</th>
+          <th>加急</th>
+          <th>最近进展</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for task in tasks %}
+        <tr>
+          <td>{{ task.task_code }}</td>
+          <td>{{ task.get_status_display }}</td>
+          <td>{% if task.urgent %}<span class="tag-urgent">加急</span>{% else %}否{% endif %}</td>
+          <td>{% if task.events.all %}{{ task.events.first.note }}{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4">请先输入工号查询</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}
