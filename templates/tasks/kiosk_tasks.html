@@ -1,32 +1,58 @@
 {% extends "tasks/base.html" %}
 {% block title %}自助终端任务{% endblock %}
+{% block header %}我的任务{% endblock %}
 {% block content %}
-<h2 class="title is-4">我的任务</h2>
-<form method="post" class="box">
-  {% csrf_token %}
-  {{ select_form.as_p }}
-  <button class="button is-primary" type="submit">打印标签</button>
-</form>
-<table class="table is-fullwidth">
-  <thead>
-    <tr>
-      <th>任务单号</th>
-      <th>状态</th>
-      <th>加急</th>
-      <th>操作</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for task in tasks %}
-    <tr>
-      <td>{{ task.task_code }}</td>
-      <td>{{ task.get_status_display }}</td>
-      <td>{% if task.urgent %}<span class="tag is-danger">加急</span>{% else %}否{% endif %}</td>
-      <td><a class="button is-small" href="{% url 'tasks:kiosk_urgent' task.pk %}">加急申请</a></td>
-    </tr>
-    {% empty %}
-    <tr><td colspan="4">暂无任务</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="window content-window">
+  <div class="title-bar">
+    <div class="title-bar-text">打印标签</div>
+    <div class="title-bar-controls">
+      <button aria-label="Minimize"></button>
+      <button aria-label="Maximize"></button>
+      <button aria-label="Close"></button>
+    </div>
+  </div>
+  <div class="window-body">
+    <form method="post" class="form-98">
+      {% csrf_token %}
+      {{ select_form.as_p }}
+      <div class="field-row" style="justify-content: flex-end; gap: 8px;">
+        <button class="button" type="submit">打印标签</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="window content-window">
+  <div class="title-bar">
+    <div class="title-bar-text">任务列表</div>
+    <div class="title-bar-controls">
+      <button aria-label="Minimize"></button>
+      <button aria-label="Maximize"></button>
+      <button aria-label="Close"></button>
+    </div>
+  </div>
+  <div class="window-body">
+    <table class="table-98">
+      <thead>
+        <tr>
+          <th>任务单号</th>
+          <th>状态</th>
+          <th>加急</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for task in tasks %}
+        <tr>
+          <td>{{ task.task_code }}</td>
+          <td>{{ task.get_status_display }}</td>
+          <td>{% if task.urgent %}<span class="tag-urgent">加急</span>{% else %}否{% endif %}</td>
+          <td><a class="button" href="{% url 'tasks:kiosk_urgent' task.pk %}">加急申请</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4">暂无任务</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}
