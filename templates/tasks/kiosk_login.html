@@ -2,46 +2,14 @@
 {% block title %}自助终端登录{% endblock %}
 {% block header %}自助终端登录{% endblock %}
 {% block content %}
-<div class="row g-3 mb-4">
-  <div class="col-md-6 col-xl-4">
-    <div class="card h-100">
-      <div class="card-body">
-        <h6 class="text-muted">刷卡机状态</h6>
-        <p class="mb-2">
-          {% if card_reader.connected %}
-          <span class="badge bg-success">已连接</span>
-          {% else %}
-          <span class="badge bg-secondary">未连接</span>
-          {% endif %}
-        </p>
-        {% if card_last %}
-        <p class="mb-0 small text-muted">最近刷卡：<code>{{ card_last }}</code></p>
-        {% else %}
-        <p class="mb-0 small text-muted">尚无刷卡记录</p>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-  <div class="col-md-6 col-xl-4">
-    <div class="card h-100">
-      <div class="card-body">
-        <h6 class="text-muted">标签打印机状态</h6>
-        <p class="mb-2">
-          {% if printer.connected %}
-          <span class="badge bg-success">已连接</span>
-          {% else %}
-          <span class="badge bg-secondary">未连接</span>
-          {% endif %}
-        </p>
-        <p class="mb-2 small text-muted">待打印任务：{{ printer_pending_jobs|length }}</p>
-        {% if printer_history %}
-        <p class="mb-0 small text-muted">最近打印时间：{{ printer_history.0.timestamp|date:"Y-m-d H:i:s" }}</p>
-        {% else %}
-        <p class="mb-0 small text-muted">尚无打印记录</p>
-        {% endif %}
-      </div>
-    </div>
-  </div>
+<div
+  id="hardware-status-panel"
+  hx-get="{% url 'tasks:hardware_status_panel' %}"
+  hx-trigger="load, hardware-status from:body"
+  hx-target="this"
+  hx-swap="innerHTML"
+>
+  {% include "tasks/includes/hardware_status_panel.html" %}
 </div>
 <div class="card">
   <div class="card-header">刷卡登录</div>
@@ -53,4 +21,24 @@
     </form>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    var source = new EventSource("{% url 'tasks:hardware_status_stream' %}");
+    var dispatch = function (event) {
+      try {
+        var detail = JSON.parse(event.data || "{}");
+        document.body.dispatchEvent(new CustomEvent("hardware-status", { detail: detail }));
+      } catch (err) {
+        document.body.dispatchEvent(new CustomEvent("hardware-status", { detail: { raw: event.data } }));
+      }
+    };
+    source.addEventListener("hardware-status", dispatch);
+    window.addEventListener("beforeunload", function () {
+      source.close();
+    });
+  })();
+</script>
 {% endblock %}

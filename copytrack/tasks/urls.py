@@ -14,4 +14,6 @@ urlpatterns = [
     path("operator/", views.operator_console, name="operator_console"),
     path("reports/", views.reports, name="reports"),
     path("hardware/test/", views.hardware_test, name="hardware_test"),
+    path("hardware/status/panel/", views.hardware_status_panel, name="hardware_status_panel"),
+    path("hardware/status/stream/", views.hardware_status_stream, name="hardware_status_stream"),
 ]

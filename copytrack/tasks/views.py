@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 import csv
+import json
 from datetime import datetime
 from io import StringIO
 
 from django.contrib import messages
-from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, StreamingHttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -22,7 +23,7 @@ from .forms import (
     UrgencyRequestForm,
 )
 from .models import Task, TaskEvent
-from .services.hardware import CardReaderSimulator, LabelPrinterSimulator
+from .services.hardware import HARDWARE_STATUS, CardReaderSimulator, LabelPrinterSimulator
 from .services.printing import LabelPrinter
 from .services.queue import get_completed_tasks, get_processing_queue, get_waiting_queue
 from .services.statistics import calculate_summary, export_to_rows, filter_by_date
@@ -33,6 +34,18 @@ PRINTER_SIMULATOR = LabelPrinterSimulator()
 
 CARD_READER_SIMULATOR.connect()
 PRINTER_SIMULATOR.connect()
+
+
+def _hardware_status_context() -> dict[str, object]:
+    """Provide context used to render hardware status panels."""
+    return {
+        "card_reader": CARD_READER_SIMULATOR,
+        "card_last": CARD_READER_SIMULATOR.last_card,
+        "printer": PRINTER_SIMULATOR,
+        "printer_pending_jobs": PRINTER_SIMULATOR.pending_jobs(),
+        "printer_history": PRINTER_SIMULATOR.history(),
+        "hardware_snapshot": HARDWARE_STATUS.snapshot(),
+    }
 
 
 class HomeView(View):
@@ -77,14 +90,8 @@ class KioskLoginView(View):
         return self._render(request, form)
 
     def _render(self, request: HttpRequest, form: KioskLoginForm) -> HttpResponse:
-        context = {
-            "form": form,
-            "card_reader": CARD_READER_SIMULATOR,
-            "card_last": CARD_READER_SIMULATOR.last_card,
-            "printer": PRINTER_SIMULATOR,
-            "printer_pending_jobs": PRINTER_SIMULATOR.pending_jobs(),
-            "printer_history": PRINTER_SIMULATOR.history(),
-        }
+        context = {"form": form}
+        context.update(_hardware_status_context())
         return render(request, self.template_name, context)
 
 
@@ -320,8 +327,63 @@ class HardwareTestView(View):
             "swipe_history": CARD_READER_SIMULATOR.history(),
             "pending_jobs": PRINTER_SIMULATOR.pending_jobs(),
             "print_history": PRINTER_SIMULATOR.history(),
+            "hardware_snapshot": HARDWARE_STATUS.snapshot(),
         }
         return render(request, self.template_name, context)
+
+
+class HardwareStatusPanelView(View):
+    template_name = "tasks/includes/hardware_status_panel.html"
+
+    def get(self, request: HttpRequest) -> HttpResponse:
+        return render(request, self.template_name, _hardware_status_context())
+
+
+class HardwareStatusStreamView(View):
+    """Server-Sent Events endpoint streaming hardware status changes."""
+
+    def get(self, request: HttpRequest) -> StreamingHttpResponse:
+        response = StreamingHttpResponse(
+            self._event_stream(request),
+            content_type="text/event-stream",
+        )
+        response["Cache-Control"] = "no-cache"
+        response["X-Accel-Buffering"] = "no"
+        return response
+
+    def _event_stream(self, request: HttpRequest):
+        last_seen = self._parse_last_event_id(request.headers.get("Last-Event-ID"))
+        try:
+            latest = HARDWARE_STATUS.latest_event()
+            if latest and latest["id"] > (last_seen or 0):
+                yield _format_sse_event(latest)
+                last_seen = latest["id"]
+            while True:
+                event = HARDWARE_STATUS.wait_for_event(last_seen)
+                yield _format_sse_event(event)
+                last_seen = event["id"]
+        except GeneratorExit:  # connection closed by client
+            return
+
+    @staticmethod
+    def _parse_last_event_id(header_value: str | None) -> int | None:
+        if not header_value:
+            return None
+        try:
+            return int(header_value)
+        except (TypeError, ValueError):
+            return None
+
+
+def _format_sse_event(event: dict[str, object]) -> str:
+    payload = json.dumps(
+        {
+            "changed_device": event.get("changed_device"),
+            "statuses": event.get("statuses"),
+            "timestamp": event.get("timestamp"),
+        }
+    )
+    return f"id: {event['id']}\nevent: hardware-status\ndata: {payload}\n\n"
 
 
 home = HomeView.as_view()
@@ -332,3 +394,5 @@ web_tasks = WebTaskListView.as_view()
 operator_console = OperatorConsoleView.as_view()
 reports = ReportView.as_view()
 hardware_test = HardwareTestView.as_view()
+hardware_status_panel = HardwareStatusPanelView.as_view()
+hardware_status_stream = HardwareStatusStreamView.as_view()
