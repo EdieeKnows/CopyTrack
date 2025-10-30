@@ -2,57 +2,47 @@
 {% block title %}操作员控制台{% endblock %}
 {% block header %}操作员控制台{% endblock %}
 {% block content %}
-<div class="content-grid">
-  <div class="window content-window">
-    <div class="title-bar">
-      <div class="title-bar-text">任务处理</div>
-      <div class="title-bar-controls">
-        <button aria-label="Minimize"></button>
-        <button aria-label="Maximize"></button>
-        <button aria-label="Close"></button>
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">任务处理</div>
+      <div class="card-body">
+        <form method="post" class="vstack gap-3">
+          {% csrf_token %}
+          {{ form.as_p }}
+          <button class="btn btn-primary" type="submit">提交</button>
+        </form>
       </div>
-    </div>
-    <div class="window-body">
-      <form method="post" class="form-98">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <div class="field-row" style="justify-content: flex-end; gap: 8px;">
-          <button class="button" type="submit">提交</button>
-        </div>
-      </form>
     </div>
   </div>
-  <div class="window content-window">
-    <div class="title-bar">
-      <div class="title-bar-text">队列情况</div>
-      <div class="title-bar-controls">
-        <button aria-label="Minimize"></button>
-        <button aria-label="Maximize"></button>
-        <button aria-label="Close"></button>
-      </div>
-    </div>
-    <div class="window-body stacked-section">
-      <div>
-        <h3>待处理</h3>
-        <ul class="list-plain">
-          {% for task in waiting %}
-          <li>
-            {{ task.task_code }} - {{ task.user_name }} {% if task.urgent %}<span class="tag-urgent">加急</span>{% endif %}
-          </li>
-          {% empty %}
-          <li>暂无</li>
-          {% endfor %}
-        </ul>
-      </div>
-      <div>
-        <h3>处理中</h3>
-        <ul class="list-plain">
-          {% for task in processing %}
-          <li>{{ task.task_code }} - {{ task.user_name }} ({{ task.start_time|date:"H:i" }})</li>
-          {% empty %}
-          <li>暂无</li>
-          {% endfor %}
-        </ul>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">队列情况</div>
+      <div class="card-body">
+        <div class="mb-4">
+          <h3 class="h5">待处理</h3>
+          <ul class="list-group list-group-flush">
+            {% for task in waiting %}
+            <li class="list-group-item px-0">
+              {{ task.task_code }} - {{ task.user_name }} {% if task.urgent %}<span class="badge bg-danger">加急</span>{% endif %}
+            </li>
+            {% empty %}
+            <li class="list-group-item px-0">暂无</li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div>
+          <h3 class="h5">处理中</h3>
+          <ul class="list-group list-group-flush">
+            {% for task in processing %}
+            <li class="list-group-item px-0">
+              {{ task.task_code }} - {{ task.user_name }} ({{ task.start_time|date:"H:i" }})
+            </li>
+            {% empty %}
+            <li class="list-group-item px-0">暂无</li>
+            {% endfor %}
+          </ul>
+        </div>
       </div>
     </div>
   </div>

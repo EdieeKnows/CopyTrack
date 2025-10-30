@@ -2,83 +2,66 @@
 {% block title %}报表统计{% endblock %}
 {% block header %}报表统计{% endblock %}
 {% block content %}
-<div class="content-grid">
-  <div class="window content-window">
-    <div class="title-bar">
-      <div class="title-bar-text">筛选条件</div>
-      <div class="title-bar-controls">
-        <button aria-label="Minimize"></button>
-        <button aria-label="Maximize"></button>
-        <button aria-label="Close"></button>
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">筛选条件</div>
+      <div class="card-body">
+        <form method="get" class="vstack gap-3 mb-4">
+          {{ form.as_p }}
+          <button class="btn btn-primary" type="submit">筛选</button>
+        </form>
+        <form method="post" class="vstack gap-3">
+          {% csrf_token %}
+          {{ form.as_p }}
+          <button class="btn btn-outline-primary" type="submit">导出CSV</button>
+        </form>
       </div>
-    </div>
-    <div class="window-body stacked-section">
-      <form method="get" class="form-98">
-        {{ form.as_p }}
-        <div class="field-row" style="justify-content: flex-end; gap: 8px;">
-          <button class="button" type="submit">筛选</button>
-        </div>
-      </form>
-      <form method="post" class="form-98">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <div class="field-row" style="justify-content: flex-end; gap: 8px;">
-          <button class="button" type="submit">导出CSV</button>
-        </div>
-      </form>
     </div>
   </div>
-  <div class="window content-window">
-    <div class="title-bar">
-      <div class="title-bar-text">统计概览</div>
-      <div class="title-bar-controls">
-        <button aria-label="Minimize"></button>
-        <button aria-label="Maximize"></button>
-        <button aria-label="Close"></button>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">统计概览</div>
+      <div class="card-body">
+        <p>总任务: <strong>{{ summary.total }}</strong></p>
+        <p>加急: <strong>{{ summary.urgent }}</strong></p>
+        <p>已完成: <strong>{{ summary.completed }}</strong></p>
+        <p>已交付: <strong>{{ summary.delivered }}</strong></p>
       </div>
-    </div>
-    <div class="window-body">
-      <p>总任务: <strong>{{ summary.total }}</strong></p>
-      <p>加急: <strong>{{ summary.urgent }}</strong></p>
-      <p>已完成: <strong>{{ summary.completed }}</strong></p>
-      <p>已交付: <strong>{{ summary.delivered }}</strong></p>
     </div>
   </div>
 </div>
-<div class="window content-window">
-  <div class="title-bar">
-    <div class="title-bar-text">任务明细</div>
-    <div class="title-bar-controls">
-      <button aria-label="Minimize"></button>
-      <button aria-label="Maximize"></button>
-      <button aria-label="Close"></button>
+<div class="card mt-4">
+  <div class="card-header">任务明细</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead class="table-light">
+          <tr>
+            <th scope="col">任务单号</th>
+            <th scope="col">用户</th>
+            <th scope="col">状态</th>
+            <th scope="col">加急</th>
+            <th scope="col">创建时间</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for task in tasks %}
+          <tr>
+            <td>{{ task.task_code }}</td>
+            <td>{{ task.user_name }}</td>
+            <td>{{ task.get_status_display }}</td>
+            <td>{% if task.urgent %}<span class="badge bg-danger">加急</span>{% else %}否{% endif %}</td>
+            <td>{{ task.created_at|date:"Y-m-d H:i" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center py-3">暂无数据</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-  </div>
-  <div class="window-body">
-    <table class="table-98">
-      <thead>
-        <tr>
-          <th>任务单号</th>
-          <th>用户</th>
-          <th>状态</th>
-          <th>加急</th>
-          <th>创建时间</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for task in tasks %}
-        <tr>
-          <td>{{ task.task_code }}</td>
-          <td>{{ task.user_name }}</td>
-          <td>{{ task.get_status_display }}</td>
-          <td>{% if task.urgent %}<span class="tag-urgent">加急</span>{% else %}否{% endif %}</td>
-          <td>{{ task.created_at|date:"Y-m-d H:i" }}</td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="5">暂无数据</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
   </div>
 </div>
 {% endblock %}
