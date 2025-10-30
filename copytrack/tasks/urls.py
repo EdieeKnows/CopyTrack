@@ -13,4 +13,5 @@ urlpatterns = [
     path("web/tasks/", views.web_tasks, name="web_tasks"),
     path("operator/", views.operator_console, name="operator_console"),
     path("reports/", views.reports, name="reports"),
+    path("hardware/test/", views.hardware_test, name="hardware_test"),
 ]

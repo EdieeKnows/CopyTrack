@@ -42,3 +42,12 @@ class ReportFilterForm(forms.Form):
     start_date = forms.DateField(label="开始日期", required=False)
     end_date = forms.DateField(label="结束日期", required=False)
     only_urgent = forms.BooleanField(label="仅显示加急", required=False)
+
+
+class CardSwipeForm(forms.Form):
+    card_number = forms.CharField(label="模拟刷卡号", max_length=64)
+
+
+class PrintLabelForm(forms.Form):
+    content = forms.CharField(label="打印内容", widget=forms.Textarea, required=True)
+    copies = forms.IntegerField(label="份数", min_value=1, max_value=5, initial=1)

@@ -1,0 +1,185 @@
+{% extends "tasks/base.html" %}
+
+{% block title %}硬件模拟测试 · CopyTrack{% endblock %}
+
+{% block header %}硬件模拟测试控制台{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header bg-light">
+        <strong>刷卡机模拟器</strong>
+      </div>
+      <div class="card-body">
+        <p class="mb-2">
+          当前状态：
+          {% if card_reader.connected %}
+          <span class="badge bg-success">已连接</span>
+          {% else %}
+          <span class="badge bg-secondary">未连接</span>
+          {% endif %}
+        </p>
+        <p class="mb-3">
+          最近一次刷卡：
+          {% if card_reader.last_card %}
+          <code>{{ card_reader.last_card }}</code>
+          {% else %}
+          无
+          {% endif %}
+        </p>
+        <div class="d-flex gap-2 flex-wrap mb-3">
+          <form method="post" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="connect_reader" />
+            <button class="btn btn-outline-primary btn-sm" {% if card_reader.connected %}disabled{% endif %}>
+              连接刷卡机
+            </button>
+          </form>
+          <form method="post" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="disconnect_reader" />
+            <button class="btn btn-outline-warning btn-sm" {% if not card_reader.connected %}disabled{% endif %}>
+              断开刷卡机
+            </button>
+          </form>
+          <form method="post" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="clear_swipe_history" />
+            <button class="btn btn-outline-secondary btn-sm">
+              清除刷卡历史
+            </button>
+          </form>
+        </div>
+        <form method="post" class="needs-validation" novalidate>
+          {% csrf_token %}
+          <input type="hidden" name="action" value="swipe_card" />
+          <div class="mb-3">
+            {{ card_form.card_number.label_tag }}
+            {{ card_form.card_number }}
+            {% if card_form.card_number.errors %}
+            <div class="text-danger small">{{ card_form.card_number.errors|striptags }}</div>
+            {% endif %}
+          </div>
+          <button class="btn btn-primary" {% if not card_reader.connected %}disabled{% endif %}>
+            模拟刷卡
+          </button>
+        </form>
+        <hr />
+        <h6>刷卡历史（最新在前）</h6>
+        {% if swipe_history %}
+        <ul class="list-group list-group-flush">
+          {% for event in swipe_history %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span><code>{{ event.card_number }}</code></span>
+            <span class="text-muted">{{ event.timestamp|date:"Y-m-d H:i:s" }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted mb-0">暂无刷卡记录</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header bg-light">
+        <strong>标签打印机模拟器</strong>
+      </div>
+      <div class="card-body">
+        <p class="mb-2">
+          当前状态：
+          {% if printer.connected %}
+          <span class="badge bg-success">已连接</span>
+          {% else %}
+          <span class="badge bg-secondary">未连接</span>
+          {% endif %}
+        </p>
+        <div class="d-flex gap-2 flex-wrap mb-3">
+          <form method="post" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="connect_printer" />
+            <button class="btn btn-outline-primary btn-sm" {% if printer.connected %}disabled{% endif %}>
+              连接打印机
+            </button>
+          </form>
+          <form method="post" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="disconnect_printer" />
+            <button class="btn btn-outline-warning btn-sm" {% if not printer.connected %}disabled{% endif %}>
+              断开打印机
+            </button>
+          </form>
+          <form method="post" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="process_next_job" />
+            <button class="btn btn-outline-success btn-sm">
+              处理下一条
+            </button>
+          </form>
+          <form method="post" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="clear_print_history" />
+            <button class="btn btn-outline-secondary btn-sm">
+              清除打印历史
+            </button>
+          </form>
+        </div>
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="print_label" />
+          <div class="mb-3">
+            {{ print_form.content.label_tag }}
+            {{ print_form.content }}
+            {% if print_form.content.errors %}
+            <div class="text-danger small">{{ print_form.content.errors|striptags }}</div>
+            {% endif %}
+          </div>
+          <div class="mb-3" style="max-width: 120px">
+            {{ print_form.copies.label_tag }}
+            {{ print_form.copies }}
+            {% if print_form.copies.errors %}
+            <div class="text-danger small">{{ print_form.copies.errors|striptags }}</div>
+            {% endif %}
+          </div>
+          <button class="btn btn-primary" {% if not printer.connected %}disabled{% endif %}>
+            模拟打印
+          </button>
+        </form>
+        <hr />
+        <h6>待打印队列</h6>
+        {% if pending_jobs %}
+        <ul class="list-group list-group-flush mb-3">
+          {% for job in pending_jobs %}
+          <li class="list-group-item">
+            <div class="small text-muted">{{ job.timestamp|date:"Y-m-d H:i:s" }}</div>
+            <div>份数：{{ job.copies }}</div>
+            <pre class="mb-0 small">{{ job.content }}</pre>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted">暂无待处理任务</p>
+        {% endif %}
+        <h6>打印历史（最新在前）</h6>
+        {% if print_history %}
+        <ul class="list-group list-group-flush">
+          {% for history in print_history %}
+          <li class="list-group-item">
+            <div class="d-flex justify-content-between">
+              <span>份数：{{ history.copies }}</span>
+              <span class="text-muted small">{{ history.timestamp|date:"Y-m-d H:i:s" }}</span>
+            </div>
+            <pre class="mb-0 small">{{ history.content }}</pre>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted mb-0">暂无历史记录</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

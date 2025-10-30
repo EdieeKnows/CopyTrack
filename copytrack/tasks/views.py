@@ -13,18 +13,26 @@ from django.utils import timezone
 from django.views import View
 
 from .forms import (
+    CardSwipeForm,
     KioskLoginForm,
+    PrintLabelForm,
     ReportFilterForm,
     ScanForm,
     TaskSelectForm,
     UrgencyRequestForm,
 )
 from .models import Task, TaskEvent
+from .services.hardware import CardReaderSimulator, LabelPrinterSimulator
 from .services.printing import LabelPrinter
 from .services.queue import get_completed_tasks, get_processing_queue, get_waiting_queue
 from .services.statistics import calculate_summary, export_to_rows, filter_by_date
 
 PRINTER = LabelPrinter()
+CARD_READER_SIMULATOR = CardReaderSimulator()
+PRINTER_SIMULATOR = LabelPrinterSimulator()
+
+CARD_READER_SIMULATOR.connect()
+PRINTER_SIMULATOR.connect()
 
 
 class HomeView(View):
@@ -52,14 +60,32 @@ class KioskLoginView(View):
 
     def get(self, request: HttpRequest) -> HttpResponse:
         form = KioskLoginForm()
-        return render(request, self.template_name, {"form": form})
+        return self._render(request, form)
 
     def post(self, request: HttpRequest) -> HttpResponse:
         form = KioskLoginForm(request.POST)
         if form.is_valid():
-            request.session["kiosk_user"] = form.cleaned_data["card_number"].strip()
+            card_number = form.cleaned_data["card_number"].strip()
+            try:
+                CARD_READER_SIMULATOR.simulate_swipe(card_number)
+            except RuntimeError as exc:
+                messages.error(request, str(exc))
+                return self._render(request, form)
+            request.session["kiosk_user"] = card_number
+            messages.success(request, "刷卡成功，正在跳转取号页面")
             return redirect("tasks:kiosk_tasks")
-        return render(request, self.template_name, {"form": form})
+        return self._render(request, form)
+
+    def _render(self, request: HttpRequest, form: KioskLoginForm) -> HttpResponse:
+        context = {
+            "form": form,
+            "card_reader": CARD_READER_SIMULATOR,
+            "card_last": CARD_READER_SIMULATOR.last_card,
+            "printer": PRINTER_SIMULATOR,
+            "printer_pending_jobs": PRINTER_SIMULATOR.pending_jobs(),
+            "printer_history": PRINTER_SIMULATOR.history(),
+        }
+        return render(request, self.template_name, context)
 
 
 class KioskTasksView(View):
@@ -81,7 +107,14 @@ class KioskTasksView(View):
         if form.is_valid():
             task: Task = form.cleaned_data["task"]
             PRINTER.print_task(task)
-            messages.success(request, f"任务 {task.task_code} 标签已发送打印")
+            try:
+                PRINTER_SIMULATOR.simulate_print(f"任务 {task.task_code} 标签", copies=task.copies)
+                messages.success(request, f"任务 {task.task_code} 标签已发送打印")
+            except RuntimeError as exc:
+                messages.warning(
+                    request,
+                    f"任务 {task.task_code} 标签已发送打印，但模拟打印机未连接：{exc}",
+                )
             return redirect("tasks:kiosk_tasks")
         return render(request, self.template_name, {"tasks": tasks, "select_form": form})
 
@@ -212,6 +245,85 @@ class ReportView(View):
         return redirect("tasks:reports")
 
 
+class HardwareTestView(View):
+    template_name = "tasks/hardware_test.html"
+
+    def get(self, request: HttpRequest) -> HttpResponse:
+        return self._render(request)
+
+    def post(self, request: HttpRequest) -> HttpResponse:
+        action = request.POST.get("action")
+        card_form: CardSwipeForm | None = None
+        print_form: PrintLabelForm | None = None
+        try:
+            if action == "connect_reader":
+                CARD_READER_SIMULATOR.connect()
+                messages.success(request, "刷卡机已连接")
+            elif action == "disconnect_reader":
+                CARD_READER_SIMULATOR.disconnect()
+                messages.info(request, "刷卡机已断开并清除最近刷卡记录")
+            elif action == "swipe_card":
+                card_form = CardSwipeForm(request.POST)
+                if card_form.is_valid():
+                    card_number = card_form.cleaned_data["card_number"]
+                    CARD_READER_SIMULATOR.simulate_swipe(card_number)
+                    messages.success(request, f"模拟刷卡成功：{card_number}")
+                else:
+                    messages.error(request, "请提供有效的刷卡号")
+            elif action == "clear_swipe_history":
+                CARD_READER_SIMULATOR.clear_history()
+                messages.info(request, "刷卡历史已清除")
+            elif action == "connect_printer":
+                PRINTER_SIMULATOR.connect()
+                messages.success(request, "标签打印机已连接")
+            elif action == "disconnect_printer":
+                PRINTER_SIMULATOR.disconnect()
+                messages.info(request, "打印机已断开并清空待处理队列")
+            elif action == "print_label":
+                print_form = PrintLabelForm(request.POST)
+                if print_form.is_valid():
+                    content = print_form.cleaned_data["content"]
+                    copies = print_form.cleaned_data["copies"]
+                    PRINTER_SIMULATOR.simulate_print(content, copies=copies)
+                    messages.success(request, "模拟打印任务已加入队列")
+                else:
+                    messages.error(request, "请检查打印内容和份数")
+            elif action == "process_next_job":
+                job = PRINTER_SIMULATOR.process_next_job()
+                if job:
+                    messages.success(request, f"已处理打印任务：{job.content[:20]}...")
+                else:
+                    messages.info(request, "当前没有待处理的打印任务")
+            elif action == "clear_print_history":
+                PRINTER_SIMULATOR.clear_history()
+                messages.info(request, "打印历史已清除")
+        except RuntimeError as exc:
+            messages.error(request, str(exc))
+        return self._render(
+            request,
+            card_form=card_form if card_form is not None else CardSwipeForm(),
+            print_form=print_form if print_form is not None else PrintLabelForm(),
+        )
+
+    def _render(
+        self,
+        request: HttpRequest,
+        *,
+        card_form: CardSwipeForm | None = None,
+        print_form: PrintLabelForm | None = None,
+    ) -> HttpResponse:
+        context = {
+            "card_reader": CARD_READER_SIMULATOR,
+            "printer": PRINTER_SIMULATOR,
+            "card_form": card_form or CardSwipeForm(),
+            "print_form": print_form or PrintLabelForm(),
+            "swipe_history": CARD_READER_SIMULATOR.history(),
+            "pending_jobs": PRINTER_SIMULATOR.pending_jobs(),
+            "print_history": PRINTER_SIMULATOR.history(),
+        }
+        return render(request, self.template_name, context)
+
+
 home = HomeView.as_view()
 kiosk_login = KioskLoginView.as_view()
 kiosk_tasks = KioskTasksView.as_view()
@@ -219,3 +331,4 @@ kiosk_urgent = KioskUrgentView.as_view()
 web_tasks = WebTaskListView.as_view()
 operator_console = OperatorConsoleView.as_view()
 reports = ReportView.as_view()
+hardware_test = HardwareTestView.as_view()
