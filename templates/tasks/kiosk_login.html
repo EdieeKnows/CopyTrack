@@ -2,22 +2,13 @@
 {% block title %}自助终端登录{% endblock %}
 {% block header %}自助终端登录{% endblock %}
 {% block content %}
-<div class="window content-window">
-  <div class="title-bar">
-    <div class="title-bar-text">刷卡登录</div>
-    <div class="title-bar-controls">
-      <button aria-label="Minimize"></button>
-      <button aria-label="Maximize"></button>
-      <button aria-label="Close"></button>
-    </div>
-  </div>
-  <div class="window-body">
-    <form method="post" class="form-98">
+<div class="card">
+  <div class="card-header">刷卡登录</div>
+  <div class="card-body">
+    <form method="post" class="vstack gap-3">
       {% csrf_token %}
       {{ form.as_p }}
-      <div class="field-row" style="justify-content: flex-end; gap: 8px;">
-        <button class="button" type="submit">刷卡登录</button>
-      </div>
+      <button class="btn btn-primary" type="submit">刷卡登录</button>
     </form>
   </div>
 </div>
